@@ -40,21 +40,44 @@ def on_train():
         messagebox.showerror("Error", str(e))
 
 
-def on_classify():
+def on_classify_local():
     global model
     try:
         image_path = image_path_var.get()  # Getting image path
         if not image_path:
             raise ValueError("Please provide a path to the image.")
-        
+
         if model is None:
             raise ValueError("Model is not trained yet.")
-        
+
         img = Image.open(image_path)  # Opening image
         img = img.resize((32, 32))  # Resizing image
         img = img.convert('RGB')  # Converting to RGB
         img = np.array(img) / 255.0  # Normalizing image
         img = np.expand_dims(img, axis=0)  # Adding batch dimension
+
+        prediction = model.predict(img)  # Making prediction
+        result_label.config(text="REAL" if prediction[0][0] < 0.5 else "FAKE")  # Displaying result
+        prediction_label.config(text=f'Predicted value: {prediction[0][0]:.4f}')
+    except Exception as e:
+        messagebox.showerror("Error", str(e))
+
+
+def on_classify_url():
+    global model
+    try:
+        url = url_entry.get()  # Getting URL from entry
+        if not url:
+            raise ValueError("Please provide a URL.")
+
+        img, img_tk = load_image_from_url(url)  # Loading image from URL
+        img = img.resize((32, 32))  # Resizing image
+        img = img.convert('RGB')  # Converting to RGB
+        img = np.array(img) / 255.0  # Normalizing image
+        img = np.expand_dims(img, axis=0)  # Adding batch dimension
+
+        if model is None:
+            raise ValueError("Model is not trained yet.")
 
         prediction = model.predict(img)  # Making prediction
         result_label.config(text="REAL" if prediction[0][0] < 0.5 else "FAKE")  # Displaying result
@@ -99,6 +122,14 @@ def browse_image():
         display_image(filepath)  # Displaying selected image
 
 
+def display_image(filepath):
+    img = Image.open(filepath)  # Opening image
+    img = img.resize((200, 200))  # Resizing image
+    img = ImageTk.PhotoImage(img)  # Converting image to Tkinter format
+    image_label.img = img   # Keeping reference to image to prevent garbage collection
+    image_label.configure(image=img)  # Displaying image
+
+
 def load_image_from_url(url):
     response = requests.get(url, stream=True)  # Getting image from URL
     response.raise_for_status()  # Checking for any errors in response
@@ -111,7 +142,7 @@ def load_image_from_url(url):
     # Converting image to Tkinter format
     img_tk = ImageTk.PhotoImage(img)
 
-    return img_tk
+    return img, img_tk
 
 
 def on_load_from_url():
@@ -120,7 +151,7 @@ def on_load_from_url():
         if not url:
             raise ValueError("Please provide a URL.")
 
-        img_tk = load_image_from_url(url)  # Loading image from URL
+        img, img_tk = load_image_from_url(url)  # Loading image from URL
         image_label.img = img_tk  # Keeping reference to image to prevent garbage collection
         image_label.configure(image=img_tk)  # Displaying image
 
@@ -130,14 +161,6 @@ def on_load_from_url():
 
     except Exception as e:
         messagebox.showerror("Error", str(e))
-
-
-def display_image(filepath):
-    img = Image.open(filepath)  # Opening image
-    img = img.resize((200, 200))  # Resizing image
-    img = ImageTk.PhotoImage(img)  # Converting image to Tkinter format
-    image_label.img = img   # Keeping reference to image to prevent garbage collection
-    image_label.configure(image=img)  # Displaying image
 
 
 def update_filters_entries(*args):
@@ -158,7 +181,7 @@ def update_filters_entries(*args):
             entry = ttk.Entry(filters_frame, textvariable=var)
             entry.grid(row=i, column=1, sticky=(tk.W, tk.E), pady=2)
     except ValueError:
-        pass  # Invalid input for number of layers
+        pass
 
 
 # Creating GUI
@@ -176,9 +199,16 @@ main_frame.grid(row=0, column=0, sticky=(tk.W, tk.E, tk.N, tk.S))
 # Divide main frame into two sections
 left_frame = ttk.Frame(main_frame, padding="5")
 left_frame.grid(row=0, column=0, sticky=(tk.W, tk.N, tk.S))
+left_frame_title = ttk.Label(left_frame, text="Model training", font=("Helvetica", 12, "bold"))
+left_frame_title.grid(row=0, column=0, columnspan=2, sticky=(tk.W, tk.E))
+
+separator = ttk.Separator(main_frame, orient='vertical')
+separator.grid(row=0, column=1, sticky="ns")
 
 right_frame = ttk.Frame(main_frame, padding="5")
-right_frame.grid(row=0, column=1, sticky=(tk.W, tk.E, tk.N, tk.S))
+right_frame.grid(row=0, column=2, sticky=(tk.W, tk.E, tk.N, tk.S))
+right_frame_title = ttk.Label(right_frame, text="Image classifier", font=("Helvetica", 12, "bold"))
+right_frame_title.grid(row=0, column=0, columnspan=2, sticky=(tk.W, tk.E))
 
 # Neural network parameters
 params = [
@@ -193,7 +223,7 @@ params = [
     ("Loss function:", "binary_crossentropy", tk.StringVar(), ["binary_crossentropy", "mean_squared_error"])
 ]
 
-row = 0
+row = 1
 vars_dict = {}
 
 for param in params:
@@ -250,7 +280,7 @@ progress_label.grid(row=row+3, column=0, columnspan=2, pady=5, sticky=(tk.W, tk.
 test_acc_label = ttk.Label(left_frame, text="")
 test_acc_label.grid(row=row+4, column=0, columnspan=3, pady=5, sticky=(tk.W, tk.E))
 
-row = 0
+row = 1
 # Image path from PC
 image_path_var = tk.StringVar()
 image_path_entry = ttk.Entry(right_frame, textvariable=image_path_var)
@@ -271,19 +301,22 @@ load_button.grid(row=row+3, column=0, columnspan=2, pady=5)
 
 # Right frame for displaying images and results
 image_label = ttk.Label(right_frame, text="")
-image_label.grid(row=row+4, column=1, padx=10, pady=10, sticky="nsew")
+# image_label.grid(row=row+4, column=1, padx=10, pady=10, sticky="nsew")
+image_label.grid(row=row+4, column=0, padx=10, pady=10)
 
-# Classify button
-classify_button = ttk.Button(right_frame, text="Classify", command=on_classify)
-classify_button.grid(row=row+5, column=0, columnspan=3, pady=5, sticky=(tk.W, tk.E))
+# Classify buttons
+classify_button_local = ttk.Button(right_frame, text="Classify Local", command=on_classify_local)
+classify_button_local.grid(row=row+5, column=0, pady=5, sticky=(tk.W, tk.E))
 
+classify_button_url = ttk.Button(right_frame, text="Classify URL", command=on_classify_url)
+classify_button_url.grid(row=row+5, column=1, pady=5, sticky=(tk.W, tk.E))
 
 # Result label
 result_label = ttk.Label(right_frame, text="")
-result_label.grid(row=row+6, column=0, padx=10, pady=10)
+result_label.grid(row=row+6, column=0, columnspan=2, pady=10)
 
 # Prediction label
 prediction_label = ttk.Label(right_frame, text="")
-prediction_label.grid(row=row+7, column=0, padx=10, pady=10)
+prediction_label.grid(row=row+7, column=0, columnspan=2, pady=10)
 
 root.mainloop()
