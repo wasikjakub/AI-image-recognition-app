@@ -17,7 +17,7 @@ def on_train():
         epoch_counter = 0  # Resetting epoch counter
         conv_layers = int(conv_layers_var.get())  # Getting number of convolutional layers
         activation = activation_var.get()  # Getting activation function
-        filters = int(filters_var.get())  # Getting number of filters
+        filters = [int(filters_vars[i].get()) for i in range(conv_layers)]  # Getting number of filters for each layer
         kernel_size = int(kernel_size_var.get())  # Getting kernel size
         dense_units = int(dense_units_var.get())  # Getting number of neurons in dense layer
         dropout_rate = float(dropout_rate_var.get())  # Getting dropout rate
@@ -98,6 +98,26 @@ def display_image(filepath):
     image_label.img = img   # Keeping reference to image to prevent garbage collection
     image_label.configure(image=img)  # Displaying image
 
+def update_filters_entries(*args):
+    # Clear existing filter entries
+    for widget in filters_frame.winfo_children():
+        widget.destroy()
+
+    # Create new filter entries based on the number of convolutional layers
+    try:
+        num_layers = int(conv_layers_var.get())
+        filters_vars.clear()
+        for i in range(num_layers):
+            var = tk.StringVar()
+            var.set("32")  # Default filter value
+            filters_vars.append(var)
+            label = ttk.Label(filters_frame, text=f"Filters for layer {i+1}:")
+            label.grid(row=i, column=0, sticky=tk.W, pady=2)
+            entry = ttk.Entry(filters_frame, textvariable=var)
+            entry.grid(row=i, column=1, sticky=(tk.W, tk.E), pady=2)
+    except ValueError:
+        pass  # Invalid input for number of layers
+
 # Creating GUI
 root = tk.Tk()  # Creating main window
 root.title("CNN GUI")  # Setting title
@@ -121,7 +141,6 @@ right_frame.grid(row=0, column=1, sticky=(tk.W, tk.E, tk.N, tk.S))
 params = [
     ("Number of convolutional layers:", "2", tk.StringVar()),
     ("Activation function:", "relu", tk.StringVar(), ["relu", "sigmoid", "tanh", "softmax"]),
-    ("Number of filters:", "32", tk.StringVar()),
     ("Kernel size:", "3", tk.StringVar()),
     ("Number of neurons in dense layer:", "512", tk.StringVar()),
     ("Dropout rate:", "0.5", tk.StringVar()),
@@ -155,7 +174,6 @@ for param in params:
 
 conv_layers_var = vars_dict["Number of convolutional layers:"]
 activation_var = vars_dict["Activation function:"]
-filters_var = vars_dict["Number of filters:"]
 kernel_size_var = vars_dict["Kernel size:"]
 dense_units_var = vars_dict["Number of neurons in dense layer:"]
 dropout_rate_var = vars_dict["Dropout rate:"]
@@ -164,62 +182,56 @@ batch_size_var = vars_dict["Batch size:"]
 optimizer_var = vars_dict["Optimizer:"]
 loss_var = vars_dict["Loss function:"]
 
-train_button = ttk.Button(left_frame, text="Train model", command=on_train)  # Creating button to train model
-train_button.grid(row=row, column=0, columnspan=2, pady=20)  # Placing button in left frame
+# Filters input frame
+filters_frame = ttk.Frame(left_frame, padding="5")
+filters_frame.grid(row=row, column=0, columnspan=2, sticky=(tk.W, tk.E))
+filters_vars = []
 
-# Progress bar and label
-row += 1
-progress_bar = ttk.Progressbar(left_frame, orient="horizontal", length=400, mode="determinate")  # Creating progress bar
-progress_bar.grid(row=row, column=0, columnspan=2, pady=10, sticky=(tk.W, tk.E))  # Placing progress bar in left frame
+# Update filters entries when the number of convolutional layers changes
+conv_layers_var.trace_add("write", update_filters_entries)
+update_filters_entries()
 
-progress_label = ttk.Label(left_frame, text="")  # Creating label for progress
-progress_label.grid(row=row+1, column=0, columnspan=2, pady=5)  # Placing label in left frame
+# Buttons
+train_button = ttk.Button(left_frame, text="Train", command=on_train)  # Creating train button
+train_button.grid(row=row+1, column=0, columnspan=2, pady=5, sticky=(tk.W, tk.E))  # Placing train button
 
-# Final model accuracy
-row += 2
-test_acc_label = ttk.Label(left_frame, text="")  # Creating label for final model accuracy
-test_acc_label.grid(row=row, column=0, columnspan=2, pady=5)  # Placing label in left frame
+# Progress bar
+progress_bar = ttk.Progressbar(left_frame, orient=tk.HORIZONTAL, length=200, mode='determinate')
+progress_bar.grid(row=row+2, column=0, columnspan=2, pady=5, sticky=(tk.W, tk.E))  # Placing progress bar
 
-# Classify image
+# Progress label
+progress_label = ttk.Label(left_frame, text="Progress: 0%")
+progress_label.grid(row=row+3, column=0, columnspan=2, pady=5, sticky=(tk.W, tk.E))  # Placing progress label
+
+# Test accuracy label
+test_acc_label = ttk.Label(left_frame, text="Final model accuracy: ")
+test_acc_label.grid(row=row+4, column=0, columnspan=3, pady=5, sticky=(tk.W, tk.E))
+
 row = 0
-classify_title_label = ttk.Label(right_frame, text="Image Classification")  # Creating label for image classification
-classify_title_label.grid(row=row, column=0, columnspan=2, pady=10)  # Placing label in right frame
+# Image path
+image_path_var = tk.StringVar()
+image_path_label = ttk.Label(right_frame, text="Image path:")
+image_path_label.grid(row=row, column=0, pady=5, sticky=tk.W)
+image_path_entry = ttk.Entry(right_frame, textvariable=image_path_var)
+image_path_entry.grid(row=row, column=1, pady=5, sticky=(tk.W, tk.E))
+browse_button = ttk.Button(right_frame, text="Browse", command=browse_image)
+browse_button.grid(row=row, column=2, pady=5, sticky=tk.W)
 
-# Input image path
-row += 1
-image_path_var = tk.StringVar()  # Creating variable for image path
-image_entry = ttk.Entry(right_frame, textvariable=image_path_var)  # Creating entry for image path
-image_entry.grid(row=row, column=0, columnspan=2, pady=5, padx=5, sticky=(tk.W, tk.E))  # Placing entry in right frame
+# Right frame for displaying images and results
+image_label = ttk.Label(right_frame, text="")
+image_label.grid(row=row+1, column=1, padx=10, pady=10, sticky="nsew")
 
-# Browse button for searching images in local OS
-browse_button = ttk.Button(right_frame, text="Browse", command=browse_image)  # Creating browse button
-browse_button.grid(row=row+1, column=0, columnspan=2, pady=5, padx=5, sticky=(tk.W, tk.E))  # Placing browse button in right frame
+# Classify button
+classify_button = ttk.Button(right_frame, text="Classify", command=on_classify)
+classify_button.grid(row=row+2, column=0, columnspan=3, pady=5, sticky=(tk.W, tk.E))
 
-# Button which executes classification
-classify_button = ttk.Button(right_frame, text="Classify Image", command=on_classify)  # Creating classify button
-classify_button.grid(row=row+2, column=0, columnspan=2, pady=5)  # Placing classify button in right frame
-
-# Display input image
-row += 3
-image_label = ttk.Label(right_frame)  # Creating label for image
-image_label.grid(row=row, column=0, columnspan=2, padx=5, pady=5)  # Placing label in right frame
 
 # Result label
-result_label = ttk.Label(right_frame, text="")  # Creating label for result
-result_label.grid(row=row+1, column=0, columnspan=2, pady=5)  # Placing label in right frame
+result_label = ttk.Label(right_frame, text="")
+result_label.grid(row=row+3, column=0, padx=10, pady=10)
 
-# Prediction value label
-row += 2
-prediction_label = ttk.Label(right_frame, text="")  # Creating label for prediction value
-prediction_label.grid(row=row, column=0, columnspan=2, pady=5)  # Placing label in right frame
+# Prediction label
+prediction_label = ttk.Label(right_frame, text="")
+prediction_label.grid(row=row+4, column=0, padx=10, pady=10)
 
-
-# Configure grid for elements in the left and right frames
-for frame in [left_frame, right_frame]:
-    frame.columnconfigure(0, weight=1)
-    frame.columnconfigure(1, weight=1)
-    for i in range(len(params) + 3):
-        frame.rowconfigure(i, weight=1)
-
-root.mainloop()  # Running the main event loop
-
+root.mainloop()

@@ -14,7 +14,7 @@ def create_cnn(input_shape, conv_layers, activation, filters, kernel_size, dense
     - input_shape: Shape of input images (height, width, channels)
     - conv_layers: Number of convolutional layers
     - activation: Activation function to use
-    - filters: Number of filters in convolutional layers
+    - filters: List of number of filters in each convolutional layer
     - kernel_size: Size of convolutional kernels
     - dense_units: Number of units in dense layer
     - dropout_rate: Dropout rate for regularization
@@ -23,10 +23,15 @@ def create_cnn(input_shape, conv_layers, activation, filters, kernel_size, dense
     - Compiled CNN model
     """
     model = models.Sequential()  # Creating sequential model
-    for _ in range(conv_layers):
-        # Adding convolutional layer with specified parameters
-        model.add(layers.Conv2D(filters, (kernel_size, kernel_size), activation=activation, padding='same', input_shape=input_shape))
+    for i in range(conv_layers):
+        if i == 0:
+            # Adding first convolutional layer with input shape
+            model.add(layers.Conv2D(filters[i], (kernel_size, kernel_size), activation=activation, padding='same', input_shape=input_shape))
+        else:
+            # Adding subsequent convolutional layers
+            model.add(layers.Conv2D(filters[i], (kernel_size, kernel_size), activation=activation, padding='same'))
         model.add(layers.MaxPooling2D((2, 2)))  # Adding max pooling layer
+
     model.add(layers.Flatten())  # Flattening the output
     model.add(layers.Dense(dense_units, activation='relu'))  # Adding dense layer
     model.add(layers.Dropout(dropout_rate))  # Adding dropout layer for regularization
@@ -41,7 +46,7 @@ def train_and_evaluate_model(conv_layers, activation, filters, kernel_size, dens
     Parameters:
     - conv_layers: Number of convolutional layers
     - activation: Activation function to use
-    - filters: Number of filters in convolutional layers
+    - filters: List of number of filters in each convolutional layer
     - kernel_size: Size of convolutional kernels
     - dense_units: Number of units in dense layer
     - dropout_rate: Dropout rate for regularization
