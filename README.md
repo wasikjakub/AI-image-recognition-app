@@ -80,6 +80,18 @@ This enables individuals and organizations to enhance their capabilities in iden
 6. **Result display**: Display the classification result ("REAL" or "FAKE").
 7. **Predicted value display**: Display the predicted value.
 
+## Tests
+
+1. Real image classified as REAL
+
+![image](https://github.com/wasikjakub/AI-image-recognition-app/assets/144064944/d6030e61-8bdb-42f7-bfe1-4a1b70e43435)
+
+2. Fake image classified as FAKE
+
+![image](https://github.com/wasikjakub/AI-image-recognition-app/assets/144064944/4c328415-13aa-4699-a820-880cc58ce10c)
+
+![image](https://github.com/wasikjakub/AI-image-recognition-app/assets/144064944/2640c920-d683-4760-82d8-6b4a76b01cb1)
+
 ## License
 
 This project is licensed under the MIT License.
