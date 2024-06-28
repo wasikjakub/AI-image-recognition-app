@@ -1,4 +1,4 @@
-# Deep Learning CNN
+# AI image recognition app
 
 This project provides a graphical user interface (GUI) for training a Convolutional Neural Network (CNN) model and classifying images as AI-generated or real. The application uses `tkinter` for the GUI, `PIL` for image processing, and `requests` for fetching images from URLs.
 
